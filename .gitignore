@@ -3,3 +3,5 @@
 /etc/tracks.conf.tmp
 .idea
 *.iml
+.DS_Store
+Thumbs.db

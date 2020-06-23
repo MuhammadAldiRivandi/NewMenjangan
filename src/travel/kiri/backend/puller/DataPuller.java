@@ -21,13 +21,13 @@ public class DataPuller {
 		sqlProperties.load(new FileReader(sqlPropertiesFile));
 		Connection connection = null;
 		connection = DriverManager.getConnection(String.format(
-				"jdbc:mysql://%s/%s?user=%s&password=%s",
+				"jdbc:mysql://%s/%s?user=%s&password=%s&serverTimezone=Asia/Jakarta",
 				sqlProperties.get("host"), sqlProperties.get("database"),
 				sqlProperties.get("user"), sqlProperties.get("password")));
 
 		Statement statement = connection.createStatement();
 		ResultSet result = statement
-				.executeQuery("SELECT trackTypeId, trackId, AsText(geodata), pathloop, penalty, transferNodes, internalInfo FROM tracks ORDER BY trackTypeId, trackId");
+				.executeQuery("SELECT trackTypeId, trackId, ST_AsText(geodata), pathloop, penalty, transferNodes, internalInfo FROM tracks ORDER BY trackTypeId, trackId");
 
 		while (result.next()) {
 			RouteResult routeResult;
