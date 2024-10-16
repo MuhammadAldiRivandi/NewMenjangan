@@ -9,7 +9,7 @@
 # Source function library.
 . /etc/init.d/functions
 
-export NEWMJNSERVE_HOME=/home/pascal/newmenjangan/dist
+export NEWMJNSERVE_HOME=C:/xampp/htdocs/NewMenjangan/dist
 
 start() {
         echo -n "Starting newmjnserve: "
