@@ -11,7 +11,10 @@ import java.util.Properties;
 import java.util.Scanner;
 import java.util.Set;
 
+import travel.kiri.backend.algorithm.ShorestPathStrategy;
+import travel.kiri.backend.algorithm.AStar;
 import travel.kiri.backend.algorithm.Dijkstra;
+import travel.kiri.backend.algorithm.FloydWarshall;
 import travel.kiri.backend.algorithm.Graph;
 import travel.kiri.backend.algorithm.GraphNode;
 import travel.kiri.backend.algorithm.LatLon;
@@ -32,7 +35,7 @@ public class Worker {
 	public Double global_maximum_transfer_distance;
 	public Double globalMultiplierWalking;
 	public Double globalPenaltyTransfer;
-	
+
 	public int numberOfRequests;
 	// in millis, needs to be converted to seconds later
 	public long totalProcessTime;
@@ -56,7 +59,7 @@ public class Worker {
 	 * Cleans up memory used during precomputation.
 	 */
 	private void cleanUpMemory() {
-		for (GraphNode node: nodes) {
+		for (GraphNode node : nodes) {
 			node.getEdges().cleanUpMemory();
 		}
 		System.gc();
@@ -113,17 +116,21 @@ public class Worker {
 	 * Compute the shortest path between the start point and the end point.
 	 * 
 	 * @param start
-	 *            the start location to route
+	 *                                     the start location to route
 	 * @param finish
-	 *            the finish location to route
+	 *                                     the finish location to route
 	 * @param customMaximumWalkingDistance
-	 *            the custom maximum walking distance, or null to use default
+	 *                                     the custom maximum walking distance, or
+	 *                                     null to use default
 	 * @param customMultiplierWalking
-	 *            the custom walking multiplier, or null to use default
+	 *                                     the custom walking multiplier, or null to
+	 *                                     use default
 	 * @param customPenaltyTransfer
-	 *            the custom penalty transfer, or null to use default
+	 *                                     the custom penalty transfer, or null to
+	 *                                     use default
 	 * @param trackTypeIdBlacklist
-	 *            Set of disallowed track type ids, or null to use all
+	 *                                     Set of disallowed track type ids, or null
+	 *                                     to use all
 	 * @return string containing the steps, as specified in Kalapa-Dago
 	 *         protocol.
 	 */
@@ -135,7 +142,7 @@ public class Worker {
 		long startTime, endTime;
 
 		Main.globalLogger.fine("Worker started for " + start + " to " + finish);
-		
+
 		// thread and stuff
 		startTime = System.currentTimeMillis();
 
@@ -175,7 +182,7 @@ public class Worker {
 			double distance = start.distanceTo(nodes.get(i).getLocation());
 			if (distance <= customMaximumWalkingDistance
 					&& nodes.get(i).isTransferNode()) {
-				vNodes.get(startNode).push_back(i, (float)distance);
+				vNodes.get(startNode).push_back(i, (float) distance);
 			}
 		}
 
@@ -184,7 +191,7 @@ public class Worker {
 			double distance = finish.distanceTo(nodes.get(i).getLocation());
 			if (distance <= customMaximumWalkingDistance
 					&& nodes.get(i).isTransferNode()) {
-				vNodes.get(i).push_back(endNode, (float)distance);
+				vNodes.get(i).push_back(endNode, (float) distance);
 			}
 		}
 
@@ -192,15 +199,16 @@ public class Worker {
 			double distance = start.distanceTo(finish);
 			if (distance <= customMaximumWalkingDistance) {
 				vNodes.get(startNode).push_back(endNode,
-						(float)(customMultiplierWalking * distance));
+						(float) (customMultiplierWalking * distance));
 				vNodes.get(endNode).push_back(startNode,
-						(float)(customMultiplierWalking * distance));
+						(float) (customMultiplierWalking * distance));
 			}
 		}
 
-		Dijkstra dijkstra = new Dijkstra(vNodes, startNode, endNode,
-				customMultiplierWalking, customPenaltyTransfer);
-		dijkstra.runAlgorithm(trackTypeIdBlacklist);
+		ShorestPathStrategy strategy = new FloydWarshall(vNodes, startNode,
+				endNode, customMultiplierWalking, customPenaltyTransfer);
+
+		strategy.runAlgorithm(trackTypeIdBlacklist);
 
 		// traversing
 		int currentNode = endNode;
@@ -210,9 +218,10 @@ public class Worker {
 		StringBuilder line = new StringBuilder();
 		List<String> steps = new ArrayList<String>();
 
-		while (dijkstra.getParent(currentNode) != Dijkstra.DIJKSTRA_NULLNODE) {
+		while (strategy.getParent(currentNode) != Dijkstra.DIJKSTRA_NULLNODE
+				|| strategy.getParent(currentNode) != AStar.ASTAR_NULL_NODE) {
 			lastNode = currentNode;
-			currentNode = dijkstra.getParent(currentNode);
+			currentNode = strategy.getParent(currentNode);
 
 			if (lastNode == endNode
 					|| currentNode == startNode
@@ -233,7 +242,7 @@ public class Worker {
 					steps.add(line.toString());
 				}
 
-				distance = (dijkstra.getDistance(lastNode) - dijkstra
+				distance = (strategy.getDistance(lastNode) - strategy
 						.getDistance(currentNode)) / customMultiplierWalking;
 				if (!(lastNode == endNode || currentNode == startNode)) {
 					distance -= customPenaltyTransfer;
@@ -269,7 +278,7 @@ public class Worker {
 				}
 			} else {
 				// angkot!!
-				distance += (dijkstra.getDistance(lastNode) - dijkstra
+				distance += (strategy.getDistance(lastNode) - strategy
 						.getDistance(currentNode))
 						/ nodes.get(currentNode).getTrack().getPenalty();
 
@@ -294,9 +303,9 @@ public class Worker {
 		// logs
 		long diff = endTime - startTime;
 		numberOfRequests++;
-		totalProcessTime+=diff;
-		
-		Main.globalLogger.fine("Worker ended, elapsed: "+diff+" milliseconds");
+		totalProcessTime += diff;
+
+		Main.globalLogger.fine("Worker ended, elapsed: " + diff + " milliseconds");
 
 		return retval.toString();
 	}
@@ -365,7 +374,7 @@ public class Worker {
 							double distance = node.getLocation().distanceTo(
 									track.getNode(i - 1).getLocation());
 							nodes.get(nodeIndex - 1).push_back(nodeIndex,
-									(float)distance);
+									(float) distance);
 						}
 					}
 
@@ -384,7 +393,7 @@ public class Worker {
 						double distance = first.getLocation().distanceTo(
 								last.getLocation());
 						// pushback edge
-						nodes.get(lastIndex).push_back(firstIndex, (float)distance);
+						nodes.get(lastIndex).push_back(firstIndex, (float) distance);
 					}
 
 					// transferNodes
@@ -422,67 +431,61 @@ public class Worker {
 	}
 
 	void linkAngkots() {
-		KDTree<GraphNodeContainer> kd=new KDTree<GraphNodeContainer>(2);
-		float minLat=Float.POSITIVE_INFINITY;
-		float minLon=Float.POSITIVE_INFINITY;
-		float maxLat=Float.NEGATIVE_INFINITY;
-		float maxLon=Float.NEGATIVE_INFINITY;
-		for(int i=0;i<nodes.size();i++)
-		{
+		KDTree<GraphNodeContainer> kd = new KDTree<GraphNodeContainer>(2);
+		float minLat = Float.POSITIVE_INFINITY;
+		float minLon = Float.POSITIVE_INFINITY;
+		float maxLat = Float.NEGATIVE_INFINITY;
+		float maxLon = Float.NEGATIVE_INFINITY;
+		for (int i = 0; i < nodes.size(); i++) {
 			GraphNode n = nodes.get(i);
-			double[] key = {n.getLocation().lat, n.getLocation().lon};
-			
-			if(minLat>n.getLocation().lat)
-			{
-				minLat=n.getLocation().lat;
+			double[] key = { n.getLocation().lat, n.getLocation().lon };
+
+			if (minLat > n.getLocation().lat) {
+				minLat = n.getLocation().lat;
 			}
-			if(maxLat<n.getLocation().lat)
-			{
-				maxLat=n.getLocation().lat;
+			if (maxLat < n.getLocation().lat) {
+				maxLat = n.getLocation().lat;
 			}
-			if(minLon>n.getLocation().lon)
-			{
-				minLon=n.getLocation().lon;
+			if (minLon > n.getLocation().lon) {
+				minLon = n.getLocation().lon;
 			}
-			if(maxLon<n.getLocation().lon)
-			{
-				maxLon=n.getLocation().lon;
+			if (maxLon < n.getLocation().lon) {
+				maxLon = n.getLocation().lon;
 			}
-			
+
 			boolean ok = true;
-			while(ok)
-			{
-					try {
-						kd.insert(key, new GraphNodeContainer(n,i));
-						ok=false;
-					} catch (KeySizeException e) {
-						e.printStackTrace();
-					} catch (KeyDuplicateException e) {
-						key[0]+=0.00001;
-						key[1]+=0.00001;
-					}					
+			while (ok) {
+				try {
+					kd.insert(key, new GraphNodeContainer(n, i));
+					ok = false;
+				} catch (KeySizeException e) {
+					e.printStackTrace();
+				} catch (KeyDuplicateException e) {
+					key[0] += 0.00001;
+					key[1] += 0.00001;
+				}
 			}
 		}
-		
+
 		LatLon minLoc = new LatLon(minLat, minLon);
 
-		double latPerKm = (maxLat-minLat)/minLoc.distanceTo(new LatLon(maxLat, minLon));
-		double lonPerKm = (maxLon-minLon)/minLoc.distanceTo(new LatLon(minLat, maxLon));
+		double latPerKm = (maxLat - minLat) / minLoc.distanceTo(new LatLon(maxLat, minLon));
+		double lonPerKm = (maxLon - minLon) / minLoc.distanceTo(new LatLon(minLat, maxLon));
 		double threshold = 2;
-		for(int i=0;i<nodes.size();i++)
-		{
+		for (int i = 0; i < nodes.size(); i++) {
 			GraphNode n = nodes.get(i);
-			double[] lowk = {n.getLocation().lat-(threshold*latPerKm*global_maximum_transfer_distance), n.getLocation().lon-(threshold*lonPerKm*global_maximum_transfer_distance)};
-			double[] uppk = {n.getLocation().lat+(threshold*latPerKm*global_maximum_transfer_distance), n.getLocation().lon+(threshold*lonPerKm*global_maximum_transfer_distance)};
-			List<GraphNodeContainer> nearby=null;
+			double[] lowk = { n.getLocation().lat - (threshold * latPerKm * global_maximum_transfer_distance),
+					n.getLocation().lon - (threshold * lonPerKm * global_maximum_transfer_distance) };
+			double[] uppk = { n.getLocation().lat + (threshold * latPerKm * global_maximum_transfer_distance),
+					n.getLocation().lon + (threshold * lonPerKm * global_maximum_transfer_distance) };
+			List<GraphNodeContainer> nearby = null;
 			try {
-				nearby =  kd.range(lowk, uppk);
+				nearby = kd.range(lowk, uppk);
 			} catch (KeySizeException e) {
 				e.printStackTrace();
 			}
-			
-			for(GraphNodeContainer near: nearby)
-			{
+
+			for (GraphNodeContainer near : nearby) {
 				// if not in same track and both are transferNode
 				if (!(nodes.get(i).getTrack().equals(near.gn.getTrack()))
 						&& nodes.get(i).isTransferNode()
@@ -490,8 +493,8 @@ public class Worker {
 					double distance = nodes.get(i).getLocation()
 							.distanceTo(near.gn.getLocation());
 					if (distance < global_maximum_transfer_distance) {
-						nodes.get(i).push_back(near.index, (float)distance);
-						near.gn.push_back(i, (float)distance);
+						nodes.get(i).push_back(near.index, (float) distance);
+						near.gn.push_back(i, (float) distance);
 					}
 				}
 			}
@@ -505,45 +508,37 @@ public class Worker {
 		}
 		return t;
 	}
-	
-	private static class GraphNodeContainer
-	{
+
+	private static class GraphNodeContainer {
 		public GraphNode gn;
 		public int index;
-		
-		public GraphNodeContainer(GraphNode gn, int index)
-		{
-			this.gn=gn;
-			this.index=index;
+
+		public GraphNodeContainer(GraphNode gn, int index) {
+			this.gn = gn;
+			this.index = index;
 		}
 	}
-	
-	public String findNearbyTransports(LatLon start, Double customMaximumWalkingDistance)
-	{
-		if(customMaximumWalkingDistance == null || customMaximumWalkingDistance == -1)
-		{
+
+	public String findNearbyTransports(LatLon start, Double customMaximumWalkingDistance) {
+		if (customMaximumWalkingDistance == null || customMaximumWalkingDistance == -1) {
 			customMaximumWalkingDistance = globalMaximumWalkingDistance;
 		}
-		
+
 		StringBuilder res = new StringBuilder();
-		
-		//for each tracks, check minimum distance
-		for(int idx = 0; idx<tracks.size();idx++)
-		{
-			Track t = tracks.get(idx);	
+
+		// for each tracks, check minimum distance
+		for (int idx = 0; idx < tracks.size(); idx++) {
+			Track t = tracks.get(idx);
 			int tSize = t.getSize();
-			double min=Double.POSITIVE_INFINITY;
-			for(int i=0;i<tSize;i++)
-			{
+			double min = Double.POSITIVE_INFINITY;
+			for (int i = 0; i < tSize; i++) {
 				double dist = start.distanceTo(t.getNode(i).getLocation());
-				if(dist<min)
-				{
-					min=dist;
+				if (dist < min) {
+					min = dist;
 				}
 			}
-			
-			if(min<=customMaximumWalkingDistance)
-			{
+
+			if (min <= customMaximumWalkingDistance) {
 				res.append(t.getTrackTypeId());
 				res.append("/");
 				res.append(t.getTrackId());
@@ -552,7 +547,7 @@ public class Worker {
 				res.append("\n");
 			}
 		}
-		
+
 		return res.toString();
 	}
 

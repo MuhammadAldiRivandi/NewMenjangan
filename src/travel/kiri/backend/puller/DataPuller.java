@@ -27,15 +27,19 @@ public class DataPuller {
 
 		Statement statement = connection.createStatement();
 		ResultSet result = statement
-				.executeQuery("SELECT trackTypeId, trackId, ST_AsText(geodata), pathloop, penalty, transferNodes, internalInfo FROM tracks ORDER BY trackTypeId, trackId");
+				.executeQuery(
+						"SELECT trackTypeId, trackId, ST_AsText(geodata), pathloop, penalty, transferNodes, internalInfo FROM tracks ORDER BY trackTypeId, trackId");
 
 		while (result.next()) {
 			RouteResult routeResult;
 			if (result.getString(3) != null) {
 				routeResult = formatTrack(result.getString(1), result
-						.getString(2), lineStringToLngLatArray(result
-						.getString(3)), result.getString(4).equals("1") ? true
-						: false, result.getString(5), result.getString(6), 0);
+						.getString(2),
+						lineStringToLngLatArray(result
+								.getString(3)),
+						result.getString(4).equals("1") ? true
+								: false,
+						result.getString(5), result.getString(6), 0);
 				output.println(routeResult.getTrackInConfFormat());
 			} else {
 				throw new DataPullerException("Route not found everywhere for "
@@ -115,17 +119,20 @@ public class DataPuller {
 				double distance;
 				if (MAX_DISTANCE != null
 						&& (distance = computeDistance(currentPoint,
-								previousPoint)) > MAX_DISTANCE && inTransitNode) {
+								previousPoint)) > MAX_DISTANCE
+						&& inTransitNode) {
 					int extraNodes = (int) Math.ceil(distance / MAX_DISTANCE) - 1;
 					for (int j = 1; j <= extraNodes; j++) {
 						double lat = previousPoint.getLatitude()
 								+ j
-								* (currentPoint.getLatitude() - previousPoint
-										.getLatitude()) / extraNodes;
+										* (currentPoint.getLatitude() - previousPoint
+												.getLatitude())
+										/ extraNodes;
 						double lng = previousPoint.getLongitude()
 								+ j
-								* (currentPoint.getLongitude() - previousPoint
-										.getLongitude()) / extraNodes;
+										* (currentPoint.getLongitude() - previousPoint
+												.getLongitude())
+										/ extraNodes;
 						LngLatAlt extraPoint = new LngLatAlt(lng, lat);
 						trackString.add(extraPoint);
 					}

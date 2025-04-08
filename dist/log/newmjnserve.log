@@ -1,8 +1,6 @@
-Oct 03, 2024 2:32:23 PM travel.kiri.backend.Main pullData
-INFO: Data pulled successfuly, but no changes.
-Oct 03, 2024 2:32:23 PM travel.kiri.backend.Worker <init>
+Apr 08, 2025 1:16:56 PM travel.kiri.backend.Worker <init>
 INFO: Configuration were read successfully
-Oct 03, 2024 2:32:23 PM travel.kiri.backend.Worker <init>
+Apr 08, 2025 1:16:56 PM travel.kiri.backend.Worker <init>
 INFO: Tracks were read successfully
-Oct 03, 2024 2:32:25 PM travel.kiri.backend.Worker <init>
+Apr 08, 2025 1:16:56 PM travel.kiri.backend.Worker <init>
 INFO: Tracks were linked successfully

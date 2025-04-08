@@ -20,7 +20,6 @@ import java.util.logging.SimpleFormatter;
 
 import travel.kiri.backend.puller.DataPuller;
 
-
 public class Main {
 
 	public static String TRACKS_CONF = "etc/tracks.conf";
@@ -28,7 +27,7 @@ public class Main {
 	public static String MJNSERVE_PROPERTIES = "etc/mjnserve.properties";
 	public static String LOGGING_PROPERTIES = "etc/logging.properties";
 	public static String NEWMJNSERVE_LOG = "log/newmjnserve.log";
-	
+
 	static NewMenjanganServer server;
 	static DataPuller puller;
 	static Timer timer;
@@ -36,10 +35,10 @@ public class Main {
 	static String homeDirectory;
 
 	public static final Logger globalLogger = Logger.getGlobal();
-	
+
 	public static void main(String[] args) throws Exception {
 		portNumber = NewMenjanganServer.DEFAULT_PORT_NUMBER;
-		for (String arg: args) {
+		for (String arg : args) {
 			try {
 				portNumber = Integer.decode(arg);
 			} catch (Exception ex) {
@@ -60,10 +59,10 @@ public class Main {
 		FileHandler logFileHandler = new FileHandler(homeDirectory + "/" + NEWMJNSERVE_LOG);
 		logFileHandler.setFormatter(new SimpleFormatter());
 		globalLogger.addHandler(logFileHandler);
-		
+
 		pullData();
 		server = new NewMenjanganServer(portNumber, homeDirectory);
-		
+
 		// Test catching TERM signal TODO remove after confirmed
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
@@ -76,13 +75,14 @@ public class Main {
 				}
 			}
 		});
-		
+
 		server.start();
 	}
 
 	public static void sendCheckStatus(int portNumber) {
 		try {
-			HttpURLConnection connection = (HttpURLConnection)(new URL("http://localhost:" + portNumber + "/admin?ping").openConnection());
+			HttpURLConnection connection = (HttpURLConnection) (new URL(
+					"http://localhost:" + portNumber + "/admin?ping").openConnection());
 			if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
 				System.out.println("NewMenjangan server is active");
 				System.exit(0);
@@ -95,10 +95,11 @@ public class Main {
 			System.exit(1);
 		}
 	}
-	
+
 	public static void sendShutdown(int portNumber) {
 		try {
-			HttpURLConnection connection = (HttpURLConnection)(new URL("http://localhost:" + portNumber + "/admin?forceshutdown").openConnection());
+			HttpURLConnection connection = (HttpURLConnection) (new URL(
+					"http://localhost:" + portNumber + "/admin?forceshutdown").openConnection());
 			if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
 				System.out.println("NewMenjangan shutdown success");
 				System.exit(0);
@@ -110,10 +111,11 @@ public class Main {
 			System.out.println("NewMenjangan shutdown fail");
 			System.exit(1);
 		}
-	}	
-	
+	}
+
 	/**
 	 * Pulls data from SQL and external sources
+	 * 
 	 * @return true if success and data has changed, false otherwise
 	 */
 	private static boolean pullData() {
@@ -127,7 +129,7 @@ public class Main {
 			PrintStream outStream = new PrintStream(tracksConfTemp);
 			puller.pull(new File(homeDirectory + "/" + MYSQL_PROPERTIES), outStream);
 			outStream.close();
-			
+
 			if (!fileEquals(new File(tracksConf), new File(tracksConfTemp))) {
 				// Use nio library for consistent behavior across OS.
 				Path source = FileSystems.getDefault().getPath(tracksConfTemp);
@@ -144,9 +146,10 @@ public class Main {
 			return false;
 		}
 	}
-	
+
 	/**
 	 * Checks if two files are identical, binary-wise
+	 * 
 	 * @param file1 the first file to check
 	 * @param file2 the second file to check
 	 * @return true if identical, false otherwise
@@ -184,8 +187,8 @@ public class Main {
 				reader2.close();
 			} catch (Exception e1) {
 				// void
-			}			
+			}
 		}
 		return true;
-	}	
+	}
 }
