@@ -1,30 +1,19 @@
 package travel.kiri.backend.algorithm;
 
-import java.util.Set;
+import java.util.*;
 
 public class FloydWarshall extends ShorestPathStrategy {
-    private final Graph graph;
+
     private final int numOfNodes;
-    private final double multiplierWalking;
-    private final double penaltyTransfer;
-
     private double[][] dist;
-    private int[][] parent;
-
-    private int startNode;
-    private int finishNode;
+    private int[][] parent;;
 
     public FloydWarshall(Graph graph, int startNode, int finishNode, double multiplierWalking, double penaltyTransfer) {
-        this.graph = graph;
-        this.startNode = startNode;
-        this.finishNode = finishNode;
+        super(graph, startNode, finishNode, multiplierWalking, penaltyTransfer);
         this.numOfNodes = graph.size();
-        this.multiplierWalking = multiplierWalking;
-        this.penaltyTransfer = penaltyTransfer;
         System.out.println(numOfNodes);
         dist = new double[numOfNodes][numOfNodes];
         parent = new int[numOfNodes][numOfNodes];
-
     }
 
     @Override

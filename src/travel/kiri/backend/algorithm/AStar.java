@@ -4,22 +4,11 @@ import java.util.*;
 
 public class AStar extends ShorestPathStrategy {
 
-    public static final int ASTAR_NULL_NODE = -1;
-
-    private List<GraphNode> graph;
-    private int startNode, finishNode;
     private NodeInfo[] nodeInfoLinks;
     private PriorityQueue<NodeInfo> openSet;
-    private final double multiplierWalking;
-    private final double penaltyTransfer;
 
     public AStar(Graph graph, int startNode, int finishNode, double multiplierWalking, double penaltyTransfer) {
-        this.graph = graph;
-        this.startNode = startNode;
-        this.finishNode = finishNode;
-        this.multiplierWalking = multiplierWalking;
-        this.penaltyTransfer = penaltyTransfer;
-
+        super(graph, startNode, finishNode, multiplierWalking, penaltyTransfer);
         int numOfNodes = graph.size();
         this.nodeInfoLinks = new NodeInfo[numOfNodes];
         this.openSet = new PriorityQueue<>();
@@ -96,7 +85,7 @@ public class AStar extends ShorestPathStrategy {
         int index;
         double g = Double.POSITIVE_INFINITY;
         double f = Double.POSITIVE_INFINITY;
-        int parent = ASTAR_NULL_NODE;
+        int parent = NULL_NODE;
 
         NodeInfo(int index) {
             this.index = index;

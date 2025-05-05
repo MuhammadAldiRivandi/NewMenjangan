@@ -1,7 +1,6 @@
 package travel.kiri.backend.algorithm;
 
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Merepresentasikan sebuah penghitung jarak terdekat dengan Dijkstra.
@@ -12,20 +11,11 @@ import java.util.Set;
  */
 public class Dijkstra extends ShorestPathStrategy {
 
-	public static final int DIJKSTRA_NULLNODE = -1;
-
-	List<GraphNode> graph;
-	int startNode, finishNode;
-
 	NodeInfo[] nodeInfoLinks;
 	NodeInfo[] nodesMinHeap;
 	int heapsize;
 	int numOfNodes;
-
 	int memorySize;
-
-	final double multiplierWalking;
-	final double penaltyTransfer;
 
 	/**
 	 * Class constructor. All allocations should go here.
@@ -35,19 +25,14 @@ public class Dijkstra extends ShorestPathStrategy {
 	 * @param finishNode reference to the finish node
 	 */
 	public Dijkstra(Graph graph, int startNode, int finishNode, double multiplierWalking, double penaltyTransfer) {
-		this.graph = graph;
-		this.startNode = startNode;
-		this.finishNode = finishNode;
+		super(graph, startNode, finishNode, multiplierWalking, penaltyTransfer);
 		this.numOfNodes = graph.size();
 		this.nodesMinHeap = new NodeInfo[numOfNodes];
 		this.nodeInfoLinks = new NodeInfo[numOfNodes];
-		this.multiplierWalking = multiplierWalking;
-		this.penaltyTransfer = penaltyTransfer;
 
 		for (int i = 0; i < numOfNodes; i++) {
 			nodeInfoLinks[i] = new NodeInfo();
 		}
-
 	}
 
 	/**
@@ -72,7 +57,7 @@ public class Dijkstra extends ShorestPathStrategy {
 			ni.baseIndex = i;
 			ni.heapIndex = i;
 			ni.distance = Double.POSITIVE_INFINITY;
-			ni.parent = DIJKSTRA_NULLNODE;
+			ni.parent = NULL_NODE;
 			nodesMinHeap[heapsize++] = ni;
 		}
 		nodeInfoLinks[startNode].distance = 0;

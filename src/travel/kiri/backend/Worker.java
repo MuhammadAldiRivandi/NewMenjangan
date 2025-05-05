@@ -65,18 +65,13 @@ public class Worker {
 		System.gc();
 	}
 
-	private void readConfiguration(String filename)
-			throws FileNotFoundException, IOException {
+	private void readConfiguration(String filename) throws FileNotFoundException, IOException {
 		Properties properties = new Properties();
 		properties.load(new FileInputStream(filename));
-		globalMaximumWalkingDistance = new Double(
-				properties.getProperty("maximum_walking_distance"));
-		global_maximum_transfer_distance = new Double(
-				properties.getProperty("maximum_transfer_distance"));
-		globalMultiplierWalking = new Double(
-				properties.getProperty("multiplier_walking"));
-		globalPenaltyTransfer = new Double(
-				properties.getProperty("penalty_transfer"));
+		globalMaximumWalkingDistance = Double.parseDouble(properties.getProperty("maximum_walking_distance"));
+		global_maximum_transfer_distance = Double.parseDouble(properties.getProperty("maximum_transfer_distance"));
+		globalMultiplierWalking = Double.parseDouble(properties.getProperty("multiplier_walking"));
+		globalPenaltyTransfer = Double.parseDouble(properties.getProperty("penalty_transfer"));
 	}
 
 	/**
@@ -103,8 +98,7 @@ public class Worker {
 		sb.append(edgesCount + " edges.\n");
 
 		sb.append("Maximum walking = " + globalMaximumWalkingDistance + "\n");
-		sb.append("Maximum transfer = " + global_maximum_transfer_distance
-				+ "\n");
+		sb.append("Maximum transfer = " + global_maximum_transfer_distance + "\n");
 		sb.append("Walking multiplier = " + globalMultiplierWalking + "\n");
 		sb.append("Transfer penalty = " + globalPenaltyTransfer + "\n");
 		sb.append("Log Level = " + Main.globalLogger.getLevel() + "\n");
@@ -137,18 +131,17 @@ public class Worker {
 	public String findRoute(LatLon start, LatLon finish,
 			Double customMaximumWalkingDistance,
 			Double customMultiplierWalking, Double customPenaltyTransfer,
-			Set<String> trackTypeIdBlacklist) {
+			Set<String> trackTypeIdBlacklist, String algorithm) {
 
-		long startTime, endTime;
+		double startTime, endTime;
 
 		Main.globalLogger.fine("Worker started for " + start + " to " + finish);
 
 		// thread and stuff
-		startTime = System.currentTimeMillis();
+		startTime = System.nanoTime();
 
 		// setting the parameters
-		if (customMaximumWalkingDistance == null
-				|| customMaximumWalkingDistance == -1) {
+		if (customMaximumWalkingDistance == null || customMaximumWalkingDistance == -1) {
 			customMaximumWalkingDistance = globalMaximumWalkingDistance;
 		}
 		if (customMultiplierWalking == null || customMultiplierWalking == -1) {
@@ -168,8 +161,7 @@ public class Worker {
 		GraphNode realNode;
 		for (int i = 0; i < nodes.size(); i++) {
 			realNode = nodes.get(i);
-			vNodes.add(new GraphNode(realNode.getLocation(), realNode
-					.getTrack()));
+			vNodes.add(new GraphNode(realNode.getLocation(), realNode.getTrack()));
 			vNodes.get(i).link(realNode);
 		}
 
@@ -180,8 +172,7 @@ public class Worker {
 		// Link startNode to other nodes by walking
 		for (int i = 0; i < nodes.size(); i++) {
 			double distance = start.distanceTo(nodes.get(i).getLocation());
-			if (distance <= customMaximumWalkingDistance
-					&& nodes.get(i).isTransferNode()) {
+			if (distance <= customMaximumWalkingDistance && nodes.get(i).isTransferNode()) {
 				vNodes.get(startNode).push_back(i, (float) distance);
 			}
 		}
@@ -189,8 +180,7 @@ public class Worker {
 		// Link endNode to other nodes by walking
 		for (int i = 0; i < nodes.size(); i++) {
 			double distance = finish.distanceTo(nodes.get(i).getLocation());
-			if (distance <= customMaximumWalkingDistance
-					&& nodes.get(i).isTransferNode()) {
+			if (distance <= customMaximumWalkingDistance && nodes.get(i).isTransferNode()) {
 				vNodes.get(i).push_back(endNode, (float) distance);
 			}
 		}
@@ -198,15 +188,20 @@ public class Worker {
 		{
 			double distance = start.distanceTo(finish);
 			if (distance <= customMaximumWalkingDistance) {
-				vNodes.get(startNode).push_back(endNode,
-						(float) (customMultiplierWalking * distance));
-				vNodes.get(endNode).push_back(startNode,
-						(float) (customMultiplierWalking * distance));
+				vNodes.get(startNode).push_back(endNode, (float) (customMultiplierWalking * distance));
+				vNodes.get(endNode).push_back(startNode, (float) (customMultiplierWalking * distance));
 			}
 		}
 
-		ShorestPathStrategy strategy = new FloydWarshall(vNodes, startNode,
-				endNode, customMultiplierWalking, customPenaltyTransfer);
+		ShorestPathStrategy strategy;
+
+		if ("floydwarshall".equals(algorithm)) {
+			strategy = new FloydWarshall(vNodes, startNode, endNode, customMultiplierWalking, customPenaltyTransfer);
+		} else if ("astar".equals(algorithm)) {
+			strategy = new AStar(vNodes, startNode, endNode, customMultiplierWalking, customPenaltyTransfer);
+		} else {
+			strategy = new Dijkstra(vNodes, startNode, endNode, customMultiplierWalking, customPenaltyTransfer);
+		}
 
 		strategy.runAlgorithm(trackTypeIdBlacklist);
 
@@ -218,15 +213,12 @@ public class Worker {
 		StringBuilder line = new StringBuilder();
 		List<String> steps = new ArrayList<String>();
 
-		while (strategy.getParent(currentNode) != Dijkstra.DIJKSTRA_NULLNODE
-				|| strategy.getParent(currentNode) != AStar.ASTAR_NULL_NODE) {
+		while (strategy.getParent(currentNode) != strategy.NULL_NODE) {
 			lastNode = currentNode;
 			currentNode = strategy.getParent(currentNode);
 
-			if (lastNode == endNode
-					|| currentNode == startNode
-					|| !nodes.get(currentNode).getTrack()
-							.equals(nodes.get(lastNode).getTrack())) {
+			if (lastNode == endNode || currentNode == startNode
+					|| !nodes.get(currentNode).getTrack().equals(nodes.get(lastNode).getTrack())) {
 				if (angkotLength > 0) {
 					Track t = nodes.get(lastNode).getTrack();
 					line.insert(0, "/");
@@ -242,8 +234,8 @@ public class Worker {
 					steps.add(line.toString());
 				}
 
-				distance = (strategy.getDistance(lastNode) - strategy
-						.getDistance(currentNode)) / customMultiplierWalking;
+				distance = (strategy.getDistance(lastNode) - strategy.getDistance(currentNode))
+						/ customMultiplierWalking;
 				if (!(lastNode == endNode || currentNode == startNode)) {
 					distance -= customPenaltyTransfer;
 				}
@@ -278,8 +270,7 @@ public class Worker {
 				}
 			} else {
 				// angkot!!
-				distance += (strategy.getDistance(lastNode) - strategy
-						.getDistance(currentNode))
+				distance += (strategy.getDistance(lastNode) - strategy.getDistance(currentNode))
 						/ nodes.get(currentNode).getTrack().getPenalty();
 
 				LatLon location = nodes.get(currentNode).getLocation();
@@ -298,14 +289,16 @@ public class Worker {
 			}
 		}
 
-		endTime = System.currentTimeMillis();
+		endTime = System.nanoTime();
 
 		// logs
-		long diff = endTime - startTime;
+		double diff = (endTime - startTime) / 1000000.0;
 		numberOfRequests++;
 		totalProcessTime += diff;
 
 		Main.globalLogger.fine("Worker ended, elapsed: " + diff + " milliseconds");
+
+		System.out.println("Running Time " + algorithm + " = " + String.format("%.2f", diff) + " ms");
 
 		return retval.toString();
 	}
